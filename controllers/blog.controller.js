@@ -3,12 +3,10 @@ const Blog = require('../models/blog.model');
 exports.createBlog = async(req, res) => {
     try{
         const {title, content} = req.body;
-        const featuredImage = req.file?.fileName;
 
         const blog = await Blog.create({
             title,
             content,
-            featuredImage,
             author: req.user._id
         })
 
@@ -59,10 +57,6 @@ exports.updateBlog = async (req, res) => {
 
         blog.title = req.body.title || blog.title;
         blog.content = req.body.content || blog.content;
-
-        if(req.file){
-            blog.featuredImage = req.file?.fileName;
-        }
 
         const updated = await blog.save();
         res.json(updated);

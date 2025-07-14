@@ -5,7 +5,6 @@ const {generateToken} = require('../utils/jwt.utils');
 exports.register = async (req, res) => {
     try{
         const {firstName, lastName, email, password} = req.body;
-        const profilePic = req.file?.fileName;
 
         if(await User.findOne({email})){
             return res.status(400).json({message: 'Email already registered'});
@@ -17,8 +16,7 @@ exports.register = async (req, res) => {
             firstName,
             lastName,
             email,
-            password: hashedPassword,
-            profilePic
+            password: hashedPassword
         });
 
         res.status(201).json({
