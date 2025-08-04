@@ -1,20 +1,30 @@
+/**
+ * Blog Routes
+ * 
+ * This file defines the API routes for blog operations.
+ * It includes routes for creating, reading, updating, and deleting blog posts.
+ */
+
 const express = require('express');
-const authMiddleware = require('../middleware/auth.middleware');
-const {
-    createBlog,
-    getAllBlogs,
-    getBlogById,
-    updateBlog,
-    deleteBlog
-} = require('../controllers/blog.controller');
-
 const router = express.Router();
+const { 
+  getAllBlogs, 
+  getBlogById, 
+  createBlog, 
+  updateBlog, 
+  deleteBlog 
+} = require('../controllers/blog.controller');
+const { protect, isAuthor } = require('../middleware/auth.middleware');
 
-// Routes
+// Public routes
 router.get('/', getAllBlogs);
 router.get('/:id', getBlogById);
-router.post('/', authMiddleware, createBlog);
-router.put('/:id', authMiddleware, updateBlog);
-router.delete('/:id', authMiddleware, deleteBlog);
+
+// Protected routes
+router.post('/', protect, createBlog);
+
+// Protected routes with author check
+router.put('/:id', protect, isAuthor, updateBlog);
+router.delete('/:id', protect, isAuthor, deleteBlog);
 
 module.exports = router;

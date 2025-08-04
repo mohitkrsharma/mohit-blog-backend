@@ -1,85 +1,163 @@
+/**
+ * Blog Controller
+ * 
+ * This controller handles CRUD operations for blog posts.
+ * It includes functions for creating, reading, updating, and deleting blogs.
+ */
+
 const Blog = require('../models/blog.model');
 
-exports.createBlog = async(req, res) => {
-    try{
-        const {title, content} = req.body;
+/**
+ * Get all blog posts
+ * @route GET /api/blogs
+ * @access Public
+ */
+const getAllBlogs = async (req, res, next) => {
+  try {
+    // Extract query parameters for pagination
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
 
-        const blog = await Blog.create({
-            title,
-            content,
-            author: req.user._id
-        })
+    // Find blogs with pagination
+    const blogs = await Blog.find()
+      .sort({ createdAt: -1 }) // Sort by newest first
+      .skip(skip)
+      .limit(limit);
 
-        res.status(201).json(blog);
+    // Get total count for pagination
+    const total = await Blog.countDocuments();
+
+    res.status(200).json({
+      success: true,
+      count: blogs.length,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      },
+      data: blogs
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get a single blog post by ID
+ * @route GET /api/blogs/:id
+ * @access Public
+ */
+const getBlogById = async (req, res, next) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+
+    if (!blog) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blog not found'
+      });
     }
-    catch(err){
-        res.status(500).json({message: err.message});
+
+    res.status(200).json({
+      success: true,
+      data: blog
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Create a new blog post
+ * @route POST /api/blogs
+ * @access Private
+ */
+const createBlog = async (req, res, next) => {
+  try {
+    // Add author from authenticated user
+    req.body.author = req.user._id;
+
+    const blog = await Blog.create(req.body);
+
+    res.status(201).json({
+      success: true,
+      data: blog
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update a blog post
+ * @route PUT /api/blogs/:id
+ * @access Private
+ * @description Only the author of the blog post can update it
+ */
+const updateBlog = async (req, res, next) => {
+  try {
+    // Find blog by ID
+    let blog = await Blog.findById(req.params.id);
+
+    if (!blog) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blog not found'
+      });
     }
-}
 
-exports.getAllBlogs = async (req, res) => {
-    try{
-        const {search} = req.query;
-        const query = search ? {title: {$regex: search, $options: 'i'}} : {};
+    // Update blog
+    // Note: isAuthor middleware already checks if user is the author
+    blog = await Blog.findByIdAndUpdate(req.params.id, req.body, {
+      new: true, // Return updated blog
+      runValidators: true // Run model validators
+    });
 
-        const blogs = await Blog.find(query).populate('author','firstName lastName profilePic');
-        res.json(blogs);
+    res.status(200).json({
+      success: true,
+      data: blog
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Delete a blog post
+ * @route DELETE /api/blogs/:id
+ * @access Private
+ * @description Only the author of the blog post can delete it
+ */
+const deleteBlog = async (req, res, next) => {
+  try {
+    // Find blog by ID
+    const blog = await Blog.findById(req.params.id);
+
+    if (!blog) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blog not found'
+      });
     }
-    catch(err){
-        res.status(500).json({message: err.message});
-    }
-}
 
-exports.getBlogById = async (req, res) => {
-    try{
-        const blog = await Blog.findById(req.params.id).populate('author','firstName lastName profilePic');
-        if(!blog){
-            return res.status(404).json({message: 'Blog not found'});
-        }
-        res.json(blog);
-    }
-    catch(err){
-        res.status(500).json({message: err.message});
-    }
-}
+    // Delete blog
+    // Note: isAuthor middleware already checks if user is the author
+    await blog.deleteOne();
 
+    res.status(200).json({
+      success: true,
+      data: {}
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-exports.updateBlog = async (req, res) => {
-    try{
-        const blog = await Blog.findById(req.params.id);
-        if(!blog){
-            return res.status(404).json({message: 'Blog not found'});
-        }
-
-        if(req.user._id.toString() !== blog.author.toString()){
-            return res.status(401).json({message: 'Unauthorized'});
-        }
-
-        blog.title = req.body.title || blog.title;
-        blog.content = req.body.content || blog.content;
-
-        const updated = await blog.save();
-        res.json(updated);
-    }
-    catch(err){
-        res.status(500).json({message: err.message});
-    }
-}
-
-
-exports.deleteBlog = async (req, res) => {
-    try{
-        const blog = await Blog.findById(req.params.id);
-        if(!blog){
-            return res.status(404).json({message: 'Blog not found'});
-        }
-        if(req.user._id.toString() !== blog.author.toString()){
-            return res.status(401).json({message: 'Unauthorized'});
-        }
-        await blog.deleteOne();
-        res.json({message: 'Blog deleted successfully'});
-    }
-    catch(err){
-        res.status(500).json({message: err.message});
-    }
-}
+module.exports = {
+  getAllBlogs,
+  getBlogById,
+  createBlog,
+  updateBlog,
+  deleteBlog
+};

@@ -1,22 +1,50 @@
+/**
+ * Express Application Setup
+ * 
+ * This file configures the Express application, sets up middleware,
+ * and registers API routes.
+ */
+
+// Import required modules
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const connectDB = require('./config/db.config');
+const morgan = require('morgan');
+const path = require('path');
 
-dotenv.config();
-connectDB();
+// Import routes
+const authRoutes = require('./routes/auth.routes');
+const blogRoutes = require('./routes/blog.routes');
 
+// Import middleware
+const errorMiddleware = require('./middleware/error.middleware');
+
+// Initialize Express app
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Configure middleware
+app.use(cors()); // Enable CORS for all routes
+app.use(express.json()); // Parse JSON request bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded request bodies
+app.use(morgan('dev')); // HTTP request logger
 
-// Routes
-app.use('/api/auth', require('./routes/auth.routes'));
-app.use('/api/blogs', require('./routes/blog.routes'));
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Error Handling
-app.use(require('./middleware/error.middleware'));
+// Register API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/blogs', blogRoutes);
+
+// Base route for API health check
+app.get('/', (req, res) => {
+  res.json({ message: 'Welcome to Blog API' });
+});
+
+// Handle 404 errors
+app.use((req, res, next) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+// Global error handling middleware
+app.use(errorMiddleware);
 
 module.exports = app;

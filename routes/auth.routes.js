@@ -1,18 +1,26 @@
+/**
+ * Authentication Routes
+ * 
+ * This file defines the API routes for user authentication operations.
+ * It includes routes for registration, login, profile management, and password reset.
+ */
+
 const express = require('express');
 const router = express.Router();
-const {
-    register,
-    login,
-    forgotPassword,
-    getCurrentUser
+const { 
+  register, 
+  login, 
+  getMe, 
+  forgotPassword 
 } = require('../controllers/auth.controller');
+const { protect } = require('../middleware/auth.middleware');
 
-const authMiddleware = require('../middleware/auth.middleware');
-
-// Routes
+// Public routes
 router.post('/register', register);
 router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
-router.get('/me', authMiddleware, getCurrentUser);
+
+// Protected routes
+router.get('/me', protect, getMe);
 
 module.exports = router;
