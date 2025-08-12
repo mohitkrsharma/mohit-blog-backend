@@ -170,9 +170,63 @@ const forgotPassword = async (req, res, next) => {
   }
 };
 
+/**
+ * Reset password for logged-in user
+ * @route PUT /api/auth/reset-password
+ * @access Private
+ */
+const resetPassword = async (req, res, next) => {
+  try {
+    const { newPassword, confirmNewPassword } = req.body;
+
+    // Validate input
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a new password'
+      });
+    }
+
+    if (confirmNewPassword !== undefined && newPassword !== confirmNewPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password and confirm password do not match'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
+
+    // Load the full user document to update password (req.user has password omitted)
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Set the new password; pre-save hook will hash it
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
-  forgotPassword
+  forgotPassword,
+  resetPassword
 };

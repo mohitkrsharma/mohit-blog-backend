@@ -158,12 +158,13 @@ blog-backend/
 
 ### Authentication
 
-| Method | Endpoint                  | Description              | Authentication |
-| ------ | ------------------------- | ------------------------ | -------------- |
-| POST   | /api/auth/register        | Register a new user      | No             |
-| POST   | /api/auth/login           | Login a user             | No             |
-| POST   | /api/auth/forgot-password | Request password reset   | No             |
-| GET    | /api/auth/me              | Get current user profile | Yes            |
+| Method | Endpoint                  | Description                        | Authentication |
+| ------ | ------------------------- | ---------------------------------- | -------------- |
+| POST   | /api/auth/register        | Register a new user                | No             |
+| POST   | /api/auth/login           | Login a user                       | No             |
+| POST   | /api/auth/forgot-password | Request password reset             | No             |
+| PUT    | /api/auth/reset-password  | Reset password (logged-in user)    | Yes            |
+| GET    | /api/auth/me              | Get current user profile           | Yes            |
 
 #### Authentication Endpoints Examples
 
@@ -244,6 +245,30 @@ Content-Type: application/json
 {
   "success": true,
   "message": "Password reset email sent"
+}
+```
+
+##### Reset password (logged-in user)
+
+Note: This endpoint requires a valid JWT token. The new password must be at least 6 characters. If confirmNewPassword is provided, it must match newPassword.
+
+**Request:**
+```http
+PUT /api/auth/reset-password
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "newPassword": "newpassword123",
+  "confirmNewPassword": "newpassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Password updated successfully"
 }
 ```
 
