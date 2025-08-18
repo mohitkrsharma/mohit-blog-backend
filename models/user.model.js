@@ -46,6 +46,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['admin', 'user'],
     default: 'user'
+  },
+  passwordResetToken: {
+    type: String,
+    select: false
+  },
+  passwordResetExpires: {
+    type: Date,
+    select: false
   }
 }, {
   timestamps: true // Automatically add createdAt and updatedAt fields
@@ -76,6 +84,21 @@ userSchema.pre('save', async function(next) {
  */
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+/**
+ * Method to generate and set password reset token
+ * Stores hashed token and expiry on the user document (15 minutes expiry)
+ * @returns {string} - The plaintext reset token to send to user
+ */
+userSchema.methods.createPasswordResetToken = function() {
+  const crypto = require('crypto');
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  // Hash the token and set to user
+  this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  // Set expiration time (15 minutes)
+  this.passwordResetExpires = Date.now() + 15 * 60 * 1000;
+  return resetToken;
 };
 
 /**

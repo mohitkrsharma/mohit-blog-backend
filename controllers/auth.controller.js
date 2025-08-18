@@ -7,6 +7,8 @@
 
 const User = require('../models/user.model');
 const { generateToken } = require('../utils/jwt.utils');
+const crypto = require('crypto');
+const { sendPasswordResetEmail } = require('../utils/mailer');
 
 /**
  * Register a new user
@@ -138,30 +140,42 @@ const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
 
-    // Check if email is provided
     if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide email'
-      });
+      return res.status(400).json({ success: false, message: 'Please provide email' });
     }
 
-    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      // To prevent user enumeration, return success even if not found
+      return res.status(200).json({ success: true, message: 'If that email exists, a reset link has been sent' });
     }
 
-    // In a real application, you would:
-    // 1. Generate a reset token
-    // 2. Save it to the user document with an expiration
-    // 3. Send an email with a reset link
+    // Generate reset token and set expiry
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
 
-    // For this example, we'll just acknowledge the request
-    res.status(200).json({
+    const expiresInMinutes = 15;
+
+    // Build reset URL (prefer FRONTEND_URL or APP_URL)
+    const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password/${resetToken}`;
+
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.getFullName ? user.getFullName() : user.firstName,
+        resetUrl,
+        expiresInMinutes
+      });
+    } catch (mailErr) {
+      // If email sending fails, clear the token so it can be retried
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      throw mailErr;
+    }
+
+    return res.status(200).json({
       success: true,
       message: 'Password reset email sent'
     });
@@ -223,10 +237,54 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+/**
+ * Reset password using token
+ * @route POST /api/auth/reset-password/:token
+ * @access Public
+ */
+const resetPasswordWithToken = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { newPassword, confirmNewPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ success: false, message: 'Please provide a new password' });
+    }
+    if (confirmNewPassword !== undefined && newPassword !== confirmNewPassword) {
+      return res.status(400).json({ success: false, message: 'New password and confirm password do not match' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    }
+
+    // Hash token and find matching user with unexpired token
+    const hashed = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      passwordResetToken: hashed,
+      passwordResetExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Token is invalid or has expired' });
+    }
+
+    user.password = newPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Password has been reset successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  resetPasswordWithToken
 };

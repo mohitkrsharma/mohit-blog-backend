@@ -158,13 +158,14 @@ blog-backend/
 
 ### Authentication
 
-| Method | Endpoint                  | Description                        | Authentication |
-| ------ | ------------------------- | ---------------------------------- | -------------- |
-| POST   | /api/auth/register        | Register a new user                | No             |
-| POST   | /api/auth/login           | Login a user                       | No             |
-| POST   | /api/auth/forgot-password | Request password reset             | No             |
-| PUT    | /api/auth/reset-password  | Reset password (logged-in user)    | Yes            |
-| GET    | /api/auth/me              | Get current user profile           | Yes            |
+| Method | Endpoint                            | Description                              | Authentication |
+| ------ | ----------------------------------- | ---------------------------------------- | -------------- |
+| POST   | /api/auth/register                  | Register a new user                      | No             |
+| POST   | /api/auth/login                     | Login a user                             | No             |
+| POST   | /api/auth/forgot-password           | Request password reset (sends email)     | No             |
+| POST   | /api/auth/reset-password/:token     | Reset password using emailed token       | No             |
+| PUT    | /api/auth/reset-password            | Reset password (logged-in user)          | Yes            |
+| GET    | /api/auth/me                        | Get current user profile                 | Yes            |
 
 #### Authentication Endpoints Examples
 
@@ -611,6 +612,21 @@ The API uses a centralized error handling mechanism to ensure consistent error r
 
    # JWT Configuration
    JWT_SECRET=your_jwt_secret_key_should_be_long_and_random
+
+   # App URLs (used for building reset links)
+   # FRONTEND_URL is preferred if you have a separate frontend app route like https://app.example.com
+   # APP_URL falls back to backend origin, e.g., http://localhost:5000
+   FRONTEND_URL=http://localhost:3000
+   APP_URL=http://localhost:5000
+
+   # Email (SMTP) Configuration
+   # If not provided, emails are logged to console instead of being sent
+   SMTP_HOST=smtp.example.com
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=your_smtp_username
+   SMTP_PASS=your_smtp_password
+   EMAIL_FROM="Blog App <no-reply@example.com>"
    ```
 
    > **Note**: In production, use a strong, random string for JWT_SECRET
