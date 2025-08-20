@@ -156,9 +156,10 @@ const forgotPassword = async (req, res, next) => {
 
     const expiresInMinutes = 15;
 
-    // Build reset URL (prefer FRONTEND_URL or APP_URL)
-    const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-    const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password/${resetToken}`;
+// Build reset URL (prefer FRONTEND_URL or APP_URL)
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200'; // Default to Angular port
+      // Include email in query params so UI can prefill the input when user clicks the link
+      const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password/${resetToken}?email=${encodeURIComponent(user.email)}`;
 
     try {
       await sendPasswordResetEmail({
