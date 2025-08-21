@@ -14,19 +14,32 @@ const Blog = require('../models/blog.model');
  */
 const getAllBlogs = async (req, res, next) => {
   try {
-    // Extract query parameters for pagination
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
+    // Extract query parameters for pagination and search
+    let page = parseInt(req.query.page, 10) || 1;
+    let limit = parseInt(req.query.limit, 10) || 10;
+    // Sanitize pagination params
+    page = page < 1 ? 1 : page;
+    limit = limit < 1 ? 10 : Math.min(limit, 100);
     const skip = (page - 1) * limit;
+    const qRaw = typeof req.query.q === 'string' ? req.query.q.trim() : '';
 
-    // Find blogs with pagination
-    const blogs = await Blog.find()
-      .sort({ createdAt: -1 }) // Sort by newest first
-      .skip(skip)
-      .limit(limit);
+    // Build search filter: case-insensitive partial match on title
+    let filter = {};
+    if (qRaw) {
+      // Escape special regex characters to avoid ReDoS and invalid patterns
+      const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const safe = escapeRegex(qRaw);
+      filter = { title: { $regex: safe, $options: 'i' } };
+    }
 
-    // Get total count for pagination
-    const total = await Blog.countDocuments();
+    // Find blogs with optional search filter and pagination
+    const [blogs, total] = await Promise.all([
+      Blog.find(filter)
+        .sort({ createdAt: -1 }) // Sort by newest first
+        .skip(skip)
+        .limit(limit),
+      Blog.countDocuments(filter)
+    ]);
 
     res.status(200).json({
       success: true,
@@ -34,8 +47,10 @@ const getAllBlogs = async (req, res, next) => {
       pagination: {
         total,
         page,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / limit),
+        limit
       },
+      query: qRaw || undefined,
       data: blogs
     });
   } catch (error) {

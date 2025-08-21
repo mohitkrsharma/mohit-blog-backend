@@ -58,6 +58,7 @@ blog-backend/
 
    - CRUD operations for blog posts
    - Pagination for blog listing
+   - Search by title using query parameter `q` on GET /api/blogs
    - Author-only access for updating and deleting blogs
    - Automatic featured image generation using Picsum Photos API
 
@@ -298,13 +299,13 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### Blog Posts
 
-| Method | Endpoint       | Description              | Authentication    |
-| ------ | -------------- | ------------------------ | ----------------- |
-| GET    | /api/blogs     | Get all blog posts       | No                |
-| GET    | /api/blogs/:id | Get a specific blog post | No                |
-| POST   | /api/blogs     | Create a new blog post   | Yes               |
-| PUT    | /api/blogs/:id | Update a blog post       | Yes (author only) |
-| DELETE | /api/blogs/:id | Delete a blog post       | Yes (author only) |
+| Method | Endpoint       | Description                                  | Authentication    |
+| ------ | -------------- | -------------------------------------------- | ----------------- |
+| GET    | /api/blogs     | Get all blog posts (pagination + title search) | No              |
+| GET    | /api/blogs/:id | Get a specific blog post                     | No                |
+| POST   | /api/blogs     | Create a new blog post                       | Yes               |
+| PUT    | /api/blogs/:id | Update a blog post                           | Yes (author only) |
+| DELETE | /api/blogs/:id | Delete a blog post                           | Yes (author only) |
 
 #### Blog Endpoints Examples
 
@@ -359,6 +360,38 @@ GET /api/blogs?page=1&limit=10
   ]
 }
 ```
+
+###### Search blogs by title
+
+You can filter blogs by a case-insensitive substring of the title using the `q` query parameter. Pagination works the same as above.
+
+**Request:**
+```http
+GET /api/blogs?q=node&page=1&limit=10
+```
+
+**Response (fields abbreviated):**
+```json
+{
+  "success": true,
+  "count": 1,
+  "pagination": {
+    "total": 1,
+    "page": 1,
+    "pages": 1,
+    "limit": 10
+  },
+  "query": "node",
+  "data": [
+    { "_id": "...", "title": "Getting Started with Node.js", "author": { "_id": "...", "firstName": "John", "lastName": "Doe" }, "createdAt": "..." }
+  ]
+}
+```
+
+Notes:
+- `q` matches anywhere in the title (e.g., `node` matches "Node.js").
+- Matching is case-insensitive.
+- Special regex characters in `q` are safely escaped on the server.
 
 ##### Get a specific blog post
 
