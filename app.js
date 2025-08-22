@@ -22,7 +22,9 @@ const errorMiddleware = require('./middleware/error.middleware');
 const app = express();
 
 // Configure middleware
-app.use(cors()); // Enable CORS for all routes
+app.use(cors({
+    origin: "https://mohit-blog.vercel.app" // for dev, later restrict to your frontend domain
+}));
 app.use(express.json()); // Parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded request bodies
 app.use(morgan('dev')); // HTTP request logger
