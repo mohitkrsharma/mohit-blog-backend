@@ -156,8 +156,8 @@ const forgotPassword = async (req, res, next) => {
 
     const expiresInMinutes = 15;
 
-// Build reset URL (prefer FRONTEND_URL or APP_URL)
-      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200'; // Default to Angular port
+// Build reset URL (prefer FRONTEND_URL; default to deployed frontend)
+      const baseUrl = process.env.FRONTEND_URL || 'https://mohit-blog.vercel.app';
       // Include email in query params so UI can prefill the input when user clicks the link
       const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password/${resetToken}?email=${encodeURIComponent(user.email)}`;
 
